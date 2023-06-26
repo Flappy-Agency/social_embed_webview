@@ -9,9 +9,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 class SocialEmbed extends StatefulWidget {
   final SocialMediaGenericEmbedData socialMediaObj;
   final Color? backgroundColor;
-  const SocialEmbed(
-      {Key? key, required this.socialMediaObj, this.backgroundColor})
-      : super(key: key);
+
+  const SocialEmbed({Key? key, required this.socialMediaObj, this.backgroundColor}) : super(key: key);
 
   @override
   _SocialEmbedState createState() => _SocialEmbedState();
@@ -25,15 +24,16 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // htmlBody = ;
-    if (widget.socialMediaObj.supportMediaControll)
-      WidgetsBinding.instance!.addObserver(this);
+    if (widget.socialMediaObj.supportMediaControll) {
+      WidgetsBinding.instance.addObserver(this);
+    }
   }
 
   @override
   void dispose() {
-    if (widget.socialMediaObj.supportMediaControll)
-      WidgetsBinding.instance!.removeObserver(this);
+    if (widget.socialMediaObj.supportMediaControll) {
+      WidgetsBinding.instance.removeObserver(this);
+    }
     super.dispose();
   }
 
@@ -55,30 +55,28 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final wv = WebView(
-        initialUrl: htmlToURI(getHtmlBody()),
-        javascriptChannels:
-            <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
-        javascriptMode: JavascriptMode.unrestricted,
-        initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
-        onWebViewCreated: (wbc) {
-          wbController = wbc;
-        },
-        onPageFinished: (str) {
-          final color = colorToHtmlRGBA(getBackgroundColor(context));
-          wbController.evaluateJavascript(
-              'document.body.style= "background-color: $color"');
-          if (widget.socialMediaObj.aspectRatio == null)
-            wbController
-                .evaluateJavascript('setTimeout(() => sendHeight(), 0)');
-        },
-        navigationDelegate: (navigation) async {
-          final url = navigation.url;
-          if (navigation.isForMainFrame && await canLaunch(url)) {
-            launch(url);
-            return NavigationDecision.prevent;
-          }
-          return NavigationDecision.navigate;
-        });
+      initialUrl: htmlToURI(getHtmlBody()),
+      javascriptChannels: <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
+      javascriptMode: JavascriptMode.unrestricted,
+      initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
+      onWebViewCreated: (wbc) {
+        wbController = wbc;
+      },
+      onPageFinished: (str) {
+        final color = colorToHtmlRGBA(getBackgroundColor(context));
+        wbController.evaluateJavascript('document.body.style= "background-color: $color"');
+        if (widget.socialMediaObj.aspectRatio == null)
+          wbController.evaluateJavascript('setTimeout(() => sendHeight(), 0)');
+      },
+      navigationDelegate: (navigation) async {
+        final url = navigation.url;
+        if (navigation.isForMainFrame && await canLaunch(url)) {
+          launch(url);
+          return NavigationDecision.prevent;
+        }
+        return NavigationDecision.navigate;
+      },
+    );
     final ar = widget.socialMediaObj.aspectRatio;
     return (ar != null)
         ? ConstrainedBox(
@@ -93,16 +91,19 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
 
   JavascriptChannel _getHeightJavascriptChannel() {
     return JavascriptChannel(
-        name: 'PageHeight',
-        onMessageReceived: (JavascriptMessage message) {
-          _setHeight(double.parse(message.message));
-        });
+      name: 'PageHeight',
+      onMessageReceived: (JavascriptMessage message) {
+        _setHeight(double.parse(message.message));
+      },
+    );
   }
 
   void _setHeight(double height) {
-    setState(() {
-      _height = height + widget.socialMediaObj.bottomMargin;
-    });
+    if (mounted) {
+      setState(() {
+        _height = height + widget.socialMediaObj.bottomMargin;
+      });
+    }
   }
 
   Color getBackgroundColor(BuildContext context) {
