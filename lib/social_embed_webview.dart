@@ -18,15 +18,43 @@ class SocialEmbed extends StatefulWidget {
 
 class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   double _height = 300;
-  late final WebViewController wbController;
+  WebViewController? _controller;
   late String htmlBody;
 
   @override
   void initState() {
     super.initState();
+    _controller = WebViewController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initController());
+
     if (widget.socialMediaObj.supportMediaControll) {
       WidgetsBinding.instance.addObserver(this);
     }
+  }
+
+  void _initController() {
+    _controller?.setJavaScriptMode(JavaScriptMode.unrestricted);
+    _controller?.addJavaScriptChannel('PageHeight', onMessageReceived: _onPageHeightJavascriptMessageReceived);
+    _controller?.setBackgroundColor(getBackgroundColor(context));
+    _controller?.setNavigationDelegate(
+      NavigationDelegate(
+        onPageFinished: (str) {
+          final color = colorToHtmlRGBA(getBackgroundColor(context));
+          _controller?.runJavaScript('document.body.style= "background-color: $color"');
+          if (widget.socialMediaObj.aspectRatio == null)
+            _controller?.runJavaScript('setTimeout(() => sendHeight(), 0)');
+        },
+        onNavigationRequest: (navigation) async {
+          final url = navigation.url;
+          if (navigation.isMainFrame && await canLaunch(url)) {
+            launch(url);
+            return NavigationDecision.prevent;
+          }
+          return NavigationDecision.navigate;
+        },
+      ),
+    );
+    _controller?.loadRequest(htmlToURI(getHtmlBody()));
   }
 
   @override
@@ -43,67 +71,43 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         break;
       case AppLifecycleState.detached:
-        wbController.evaluateJavascript(widget.socialMediaObj.stopVideoScript);
+        _controller?.runJavaScript(widget.socialMediaObj.stopVideoScript);
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
-        wbController.evaluateJavascript(widget.socialMediaObj.pauseVideoScript);
+      case AppLifecycleState.hidden:
+        _controller?.runJavaScript(widget.socialMediaObj.pauseVideoScript);
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final wv = WebView(
-      initialUrl: htmlToURI(getHtmlBody()),
-      javascriptChannels: <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
-      javascriptMode: JavascriptMode.unrestricted,
-      initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
-      onWebViewCreated: (wbc) {
-        wbController = wbc;
-      },
-      onPageFinished: (str) {
-        final color = colorToHtmlRGBA(getBackgroundColor(context));
-        wbController.evaluateJavascript('document.body.style= "background-color: $color"');
-        if (widget.socialMediaObj.aspectRatio == null)
-          wbController.evaluateJavascript('setTimeout(() => sendHeight(), 0)');
-      },
-      navigationDelegate: (navigation) async {
-        final url = navigation.url;
-        if (navigation.isForMainFrame && await canLaunch(url)) {
-          launch(url);
-          return NavigationDecision.prevent;
-        }
-        return NavigationDecision.navigate;
-      },
-    );
-    final ar = widget.socialMediaObj.aspectRatio;
-    return (ar != null)
-        ? ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height / 1.5,
-              maxWidth: double.infinity,
-            ),
-            child: AspectRatio(aspectRatio: ar, child: wv),
-          )
-        : SizedBox(height: _height, child: wv);
+    final webView = WebViewWidget(controller: _controller ?? WebViewController());
+
+    final aspectRation = widget.socialMediaObj.aspectRatio;
+    if (aspectRation != null) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height / 1.5,
+          maxWidth: double.infinity,
+        ),
+        child: AspectRatio(aspectRatio: aspectRation, child: webView),
+      );
+    }
+
+    return SizedBox(height: _height, child: webView);
   }
 
-  JavascriptChannel _getHeightJavascriptChannel() {
-    return JavascriptChannel(
-      name: 'PageHeight',
-      onMessageReceived: (JavascriptMessage message) {
-        _setHeight(double.parse(message.message));
-      },
-    );
+  void _onPageHeightJavascriptMessageReceived(JavaScriptMessage message) {
+    _setHeight(double.parse(message.message));
   }
 
   void _setHeight(double height) {
-    if (mounted) {
-      setState(() {
-        _height = height + widget.socialMediaObj.bottomMargin;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _height = height;
+    });
   }
 
   Color getBackgroundColor(BuildContext context) {
@@ -127,7 +131,7 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
         <body>
           <div id="widget" style="${widget.socialMediaObj.htmlInlineStyling}">${widget.socialMediaObj.htmlBody}</div>
           ${(widget.socialMediaObj.aspectRatio == null) ? dynamicHeightScriptSetup : ''}
-          ${(widget.socialMediaObj.canChangeSize) ? dynamicHeightScriptCheck : ''}
+          ${(widget.socialMediaObj.aspectRatio == null) ? dynamicHeightScriptCheck : ''}
         </body>
       </html>
     """;
@@ -135,13 +139,14 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   static const String dynamicHeightScriptSetup = """
     <script type="text/javascript">
       const widget = document.getElementById('widget');
-      const sendHeight = () => PageHeight.postMessage(widget.clientHeight);
     </script>
   """;
 
   static const String dynamicHeightScriptCheck = """
     <script type="text/javascript">
-      const onWidgetResize = (widgets) => sendHeight();
+      const onWidgetResize = (widgets) => {
+        PageHeight.postMessage(widget.clientHeight);
+      }
       const resize_ob = new ResizeObserver(onWidgetResize);
       resize_ob.observe(widget);
     </script>

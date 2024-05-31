@@ -1,12 +1,10 @@
-import 'package:flutter/material.dart';
-
 import 'social-media-generic.dart';
 
 class FacebookPostEmbedData extends SocialMediaGenericEmbedData {
   final String postUrl;
 
   const FacebookPostEmbedData({required this.postUrl})
-      : super(canChangeSize: true, bottomMargin: 2.5);
+      : super(canChangeSize: false, bottomMargin: 2.5);
 
   @override
   String get htmlScriptUrl =>
@@ -14,8 +12,8 @@ class FacebookPostEmbedData extends SocialMediaGenericEmbedData {
 
   @override
   String get htmlBody =>
-      '<div id="fb-root"></div><div class="fb-post" data-href="$postUrl"></div>' +
-      htmlScript;
+      htmlScript +
+      '<div id="fb-root"><div class="fb-post" data-href="$postUrl"></div></div>';
 
   @override
   String get pauseVideoScript => "pauseVideo()";

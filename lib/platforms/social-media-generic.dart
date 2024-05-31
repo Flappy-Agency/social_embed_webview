@@ -17,6 +17,6 @@ abstract class SocialMediaGenericEmbedData {
   String get stopVideoScript => '';
   String get htmlInlineStyling => '';
   String get htmlScript => """
-    <script type="text/javascript" src="$htmlScriptUrl"></script>
+    <script async defer type="text/javascript" src="$htmlScriptUrl"></script>
   """;
 }
