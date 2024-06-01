@@ -5,6 +5,7 @@ import 'package:social_embed_webview/platforms/instagram.dart';
 import 'package:social_embed_webview/platforms/twitter.dart';
 import 'package:social_embed_webview/platforms/youtube.dart';
 import 'package:social_embed_webview/social_embed_webview.dart';
+import 'package:social_embed_webview/utils/embed_theme.dart';
 
 /// <srcipts>...</scripts> tag has been removed
 String tweetContent = r"""
@@ -52,23 +53,31 @@ class MyApp extends StatelessWidget {
           ),
           body: SingleChildScrollView(
             child: Column(
-                children: [
-              TwitterEmbedData(embedHtml: tweetContent),
-              InstagramEmbedData(embedHtml: instaContent),
-              YoutubeEmbedData(videoId: dataYt),
-              FacebookVideoEmbedData(videoUrl: dataFb),
-              FacebookPostEmbedData(postUrl: dataFBPost)
-            ]
-                    .map((o) => Padding(
-                          padding: const EdgeInsets.all(5.0),
-                          child: SocialEmbed(
-                            socialMediaObj: o,
-                          ),
-                        ))
-                    .toList()),
+              children: _buildSocialEmbeds(),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildSocialEmbeds() {
+    return [
+      TwitterEmbedData(
+        embedHtml: tweetContent,
+        embedTheme: EmbedTheme.dark,
+      ),
+      InstagramEmbedData(embedHtml: instaContent),
+      YoutubeEmbedData(videoId: dataYt),
+      FacebookVideoEmbedData(videoUrl: dataFb),
+      FacebookPostEmbedData(postUrl: dataFBPost)
+    ]
+        .map((o) => Padding(
+              padding: const EdgeInsets.all(5.0),
+              child: SocialEmbed(
+                socialMediaObj: o,
+              ),
+            ))
+        .toList();
   }
 }

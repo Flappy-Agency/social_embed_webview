@@ -3,6 +3,7 @@ library social_embed_webview;
 import 'package:flutter/material.dart';
 import 'package:social_embed_webview/platforms/social-media-generic.dart';
 import 'package:social_embed_webview/utils/common-utils.dart';
+import 'package:social_embed_webview/utils/embed_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -10,13 +11,21 @@ class SocialEmbed extends StatefulWidget {
   final SocialMediaGenericEmbedData socialMediaObj;
   final Color? backgroundColor;
 
-  const SocialEmbed({Key? key, required this.socialMediaObj, this.backgroundColor}) : super(key: key);
+  const SocialEmbed({
+    Key? key,
+    required this.socialMediaObj,
+    this.backgroundColor,
+  }) : super(key: key);
 
   @override
   _SocialEmbedState createState() => _SocialEmbedState();
 }
 
 class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
+  SocialMediaGenericEmbedData get _socialMediaObj => widget.socialMediaObj;
+
+  Color? get _backgroundColor => widget.backgroundColor;
+
   double _height = 300;
   WebViewController? _controller;
   late String htmlBody;
@@ -27,7 +36,7 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
     _controller = WebViewController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initController());
 
-    if (widget.socialMediaObj.supportMediaControll) {
+    if (_socialMediaObj.supportMediaControll) {
       WidgetsBinding.instance.addObserver(this);
     }
   }
@@ -41,7 +50,7 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
         onPageFinished: (str) {
           final color = colorToHtmlRGBA(getBackgroundColor(context));
           _controller?.runJavaScript('document.body.style= "background-color: $color"');
-          if (widget.socialMediaObj.aspectRatio == null)
+          if (_socialMediaObj.aspectRatio == null)
             _controller?.runJavaScript('setTimeout(() => sendHeight(), 0)');
         },
         onNavigationRequest: (navigation) async {
@@ -59,7 +68,7 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    if (widget.socialMediaObj.supportMediaControll) {
+    if (_socialMediaObj.supportMediaControll) {
       WidgetsBinding.instance.removeObserver(this);
     }
     super.dispose();
@@ -71,12 +80,12 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         break;
       case AppLifecycleState.detached:
-        _controller?.runJavaScript(widget.socialMediaObj.stopVideoScript);
+        _controller?.runJavaScript(_socialMediaObj.stopVideoScript);
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
-        _controller?.runJavaScript(widget.socialMediaObj.pauseVideoScript);
+        _controller?.runJavaScript(_socialMediaObj.pauseVideoScript);
         break;
     }
   }
@@ -85,7 +94,7 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final webView = WebViewWidget(controller: _controller ?? WebViewController());
 
-    final aspectRation = widget.socialMediaObj.aspectRatio;
+    final aspectRation = _socialMediaObj.aspectRatio;
     if (aspectRation != null) {
       return ConstrainedBox(
         constraints: BoxConstraints(
@@ -111,7 +120,7 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   }
 
   Color getBackgroundColor(BuildContext context) {
-    return widget.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor;
+    return _backgroundColor ?? Theme.of(context).scaffoldBackgroundColor;
   }
 
   String getHtmlBody() => """
@@ -129,9 +138,9 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
           </style>
         </head>
         <body>
-          <div id="widget" style="${widget.socialMediaObj.htmlInlineStyling}">${widget.socialMediaObj.htmlBody}</div>
-          ${(widget.socialMediaObj.aspectRatio == null) ? dynamicHeightScriptSetup : ''}
-          ${(widget.socialMediaObj.aspectRatio == null) ? dynamicHeightScriptCheck : ''}
+          <div id="widget" style="${_socialMediaObj.htmlInlineStyling}">${_socialMediaObj.htmlBody}</div>
+          ${(_socialMediaObj.aspectRatio == null) ? dynamicHeightScriptSetup : ''}
+          ${(_socialMediaObj.aspectRatio == null) ? dynamicHeightScriptCheck : ''}
         </body>
       </html>
     """;
